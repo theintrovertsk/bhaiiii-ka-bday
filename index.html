@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Happy Birthday!</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;700&family=Great+Vibes&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --text: #ffffff;
+    --accent: #ff4d6d;
+    --accent-glow: rgba(255, 77, 109, 0.6);
+    --gold: #ffd700;
+  }
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Poppins', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+  }
+
+  /* Background Animated Gradient & Particles */
+  .bg-gradient {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(circle at 50% 50%, #1a0a1f 0%, #0a0a0f 100%);
+    z-index: -2;
+  }
+  
+  .particles {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+  }
+  .particle {
+    position: absolute;
+    background: var(--gold);
+    border-radius: 50%;
+    opacity: 0.3;
+    animation: float 10s infinite linear;
+  }
+
+  @keyframes float {
+    0% { transform: translateY(100vh) scale(0); opacity: 0; }
+    50% { opacity: 0.6; }
+    100% { transform: translateY(-10vh) scale(1.5); opacity: 0; }
+  }
+
+  /* Main Content */
+  .container {
+    text-align: center;
+    padding: 3rem 1rem;
+    z-index: 10;
+    width: 100%;
+    max-width: 800px;
+  }
+
+  .balloon-container {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    overflow: hidden;
+  }
+  
+  .balloon {
+    position: absolute;
+    bottom: -100px;
+    width: 50px;
+    height: 65px;
+    background: var(--accent);
+    border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+    animation: rise 15s infinite ease-in;
+    opacity: 0.8;
+    box-shadow: inset -5px -5px 15px rgba(0,0,0,0.3);
+  }
+  
+  .balloon::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 40px;
+    background: rgba(255,255,255,0.3);
+  }
+
+  .balloon:nth-child(2n) { background: #4dabf7; animation-duration: 18s; }
+  .balloon:nth-child(3n) { background: #fcc419; animation-duration: 12s; }
+  .balloon:nth-child(4n) { background: #51cf66; animation-duration: 20s; }
+  .balloon:nth-child(5n) { background: #cc5de8; animation-duration: 16s; }
+
+  @keyframes rise {
+    0% { transform: translateY(0) rotate(-5deg); }
+    50% { transform: translateY(-50vh) rotate(5deg); }
+    100% { transform: translateY(-120vh) rotate(-5deg); }
+  }
+
+  /* Typography */
+  h1 {
+    font-family: 'Great Vibes', cursive;
+    font-size: 5rem;
+    color: var(--gold);
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.4), 0 0 40px rgba(255, 215, 0, 0.2);
+    margin-bottom: 0.5rem;
+    opacity: 0;
+    animation: fadeInScale 2s forwards 0.5s;
+    line-height: 1.1;
+  }
+
+  h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin-bottom: 2rem;
+    text-transform: uppercase;
+    opacity: 0;
+    animation: fadeInUp 1.5s forwards 1.5s;
+    color: var(--accent);
+    text-shadow: 0 0 10px var(--accent-glow);
+  }
+
+  /* Glassmorphism Message Box */
+  .message-box {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 2.5rem;
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    opacity: 0;
+    animation: fadeInUp 1.5s forwards 2.5s;
+    text-align: left;
+  }
+
+  .message-box p {
+    font-size: 1.05rem;
+    line-height: 1.9;
+    color: #d1d1d1;
+    font-weight: 300;
+    margin-bottom: 1.2rem;
+  }
+
+  .message-box p:last-child {
+    margin-bottom: 0;
+  }
+
+  .highlight {
+    color: var(--gold);
+    font-weight: 600;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+  }
+
+  .highlight-pink {
+    color: var(--accent);
+    font-weight: 600;
+    text-shadow: 0 0 10px var(--accent-glow);
+  }
+
+  /* Cake */
+  .cake {
+    margin: 3rem auto 1rem;
+    position: relative;
+    width: 150px;
+    height: 120px;
+    opacity: 0;
+    animation: fadeInUp 1s forwards 3s;
+  }
+  .layer {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 140px;
+    height: 40px;
+    background: #f8c8dc;
+    border-radius: 10px 10px 0 0;
+    border-bottom: 4px solid #e0a8bc;
+  }
+  .layer.mid {
+    bottom: 40px;
+    width: 110px;
+    height: 35px;
+    background: #ffb3c6;
+    border-radius: 10px 10px 0 0;
+    border-bottom: 4px solid #e08fa3;
+  }
+  .layer.top {
+    bottom: 75px;
+    width: 80px;
+    height: 30px;
+    background: #ff8fab;
+    border-radius: 10px 10px 0 0;
+  }
+  .candle {
+    position: absolute;
+    bottom: 105px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 8px;
+    height: 25px;
+    background: linear-gradient(to right, #fff, #ddd);
+    border-radius: 4px;
+    box-shadow: 0 0 5px rgba(0,0,0,0.3);
+  }
+  .flame {
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 12px;
+    height: 18px;
+    background: #ffa500;
+    border-radius: 50% 50% 20% 20%;
+    box-shadow: 0 0 15px #ffa500, 0 0 30px #ff4500;
+    animation: flicker 0.1s infinite alternate;
+  }
+  @keyframes flicker {
+    0% { transform: translateX(-50%) scale(1) rotate(-2deg); }
+    100% { transform: translateX(-50%) scale(1.1) rotate(2deg); }
+  }
+
+  /* Confetti Button */
+  .btn {
+    display: inline-block;
+    margin-top: 2.5rem;
+    padding: 1rem 2.5rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(45deg, var(--accent), #ff758f);
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    text-decoration: none;
+    box-shadow: 0 4px 15px var(--accent-glow);
+    transition: 0.3s;
+    opacity: 0;
+    animation: fadeInUp 1s forwards 3.5s;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 8px 25px var(--accent-glow);
+  }
+  .btn::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    transition: 0.5s;
+  }
+  .btn:hover::before {
+    left: 100%;
+  }
+
+  /* Animations */
+  @keyframes fadeInScale {
+    0% { opacity: 0; transform: scale(0.8); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  @keyframes fadeInUp {
+    0% { opacity: 0; transform: translateY(30px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 600px) {
+    h1 { font-size: 3.5rem; }
+    h2 { font-size: 1.2rem; }
+    .message-box { padding: 1.5rem; }
+    .message-box p { font-size: 0.95rem; }
+    .container { padding: 2rem 1rem; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="bg-gradient"></div>
+  <div class="particles" id="particles"></div>
+  
+  <div class="balloon-container" id="balloons"></div>
+
+  <div class="container">
+    <h1>Happy Birthday</h1>
+    <h2>Mere Pyare Dost</h2>
+    
+    <div class="cake">
+      <div class="layer"></div>
+      <div class="layer mid"></div>
+      <div class="layer top"></div>
+      <div class="candle"><div class="flame"></div></div>
+    </div>
+
+    <div class="message-box">
+      <p>
+        Aaj ka din bohot khaas hai, kyunki aaj <span class="highlight">tumhara</span> birthday hai! <br>
+        Bhagwan tumhe woh saari khushiyan de jo tum kabhi se chah rahe the. Tumhara har sapna poora ho, aur tumhari life mein hamesha <span class="highlight">pyaar</span>, <span class="highlight">hasi</span> aur <span class="highlight">kamyabi</span> bani rahe.
+      </p>
+      <p>
+        Tum sach mein <span class="highlight-pink">u r the best person i have ever met online</span>. Tumse baat karke hamesha acha feel hota hai. Tum jaisa dost milna kismat ki baat hai.
+      </p>
+      <p>
+        Aur haan, ek <span class="highlight">NEET aspirant</span> ho tum. Bahut mehnat kar rahe ho, yeh pata hai. Bas aise hi lagge raho. Mujhe pura yakeen hai ki <span class="highlight-pink">tumhara selection jarur niklega</span>. Bhagwan tumhe woh success dega jiske tum haqdaar ho.
+      </p>
+      <p>
+        Stay blessed, stay happy, and keep smiling always! 🥳
+      </p>
+    </div>
+
+    <button class="btn" onclick="triggerConfetti()">Click for Surprise 🎉</button>
+  </div>
+
+  <!-- Confetti Library -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  
+  <script>
+    // Generate Background Particles
+    const particlesContainer = document.getElementById('particles');
+    for (let i = 0; i < 30; i++) {
+      let p = document.createElement('div');
+      p.className = 'particle';
+      let size = Math.random() * 4 + 1;
+      p.style.width = `${size}px`;
+      p.style.height = `${size}px`;
+      p.style.left = `${Math.random() * 100}%`;
+      p.style.animationDuration = `${Math.random() * 10 + 10}s`;
+      p.style.animationDelay = `${Math.random() * 10}s`;
+      particlesContainer.appendChild(p);
+    }
+
+    // Generate Balloons
+    const balloonContainer = document.getElementById('balloons');
+    for (let i = 0; i < 15; i++) {
+      let b = document.createElement('div');
+      b.className = 'balloon';
+      b.style.left = `${Math.random() * 100}%`;
+      b.style.animationDuration = `${Math.random() * 10 + 10}s`;
+      b.style.animationDelay = `${Math.random() * 5}s`;
+      let scale = Math.random() * 0.5 + 0.5;
+      b.style.transform = `scale(${scale})`;
+      balloonContainer.appendChild(b);
+    }
+
+    // Confetti Function
+    function triggerConfetti() {
+      var duration = 4000;
+      var end = Date.now() + duration;
+
+      (function frame() {
+        confetti({
+          particleCount: 6,
+          angle: 60,
+          spread: 60,
+          origin: { x: 0 },
+          colors: ['#ff4d6d', '#ffd700', '#4dabf7', '#51cf66']
+        });
+        confetti({
+          particleCount: 6,
+          angle: 120,
+          spread: 60,
+          origin: { x: 1 },
+          colors: ['#ff4d6d', '#ffd700', '#4dabf7', '#51cf66']
+        });
+
+        if (Date.now() < end) {
+          requestAnimationFrame(frame);
+        }
+      }());
+    }
+    
+    // Auto trigger confetti after 4 seconds
+    setTimeout(triggerConfetti, 4000);
+  </script>
+</body>
+</html>
