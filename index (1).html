@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Telegram Web Clone</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #0e1621; color: #fff; height: 100vh; display: flex; justify-content: center; align-items: center; }
+    .hidden { display: none !important; }
+
+    /* Auth Box */
+    .auth-box { background: #17212b; padding: 32px; border-radius: 12px; width: 360px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+    .auth-box h2 { margin-bottom: 8px; font-size: 22px; }
+    .auth-box p { color: #8b9bb4; font-size: 14px; margin-bottom: 20px; }
+    .auth-box input { width: 100%; padding: 12px; margin-bottom: 16px; border-radius: 8px; border: 1px solid #2b5278; background: #0e1621; color: #fff; font-size: 16px; outline: none; }
+    .auth-box button { width: 100%; padding: 12px; border: none; border-radius: 8px; background: #2b5278; color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; margin-bottom: 8px; }
+    .auth-box button:hover { background: #366491; }
+    .btn-back { background: transparent !important; color: #8b9bb4 !important; border: 1px solid #2b5278 !important; }
+    #status { margin-top: 10px; font-size: 13px; color: #ff6b6b; word-break: break-word; }
+
+    /* Chat App Layout */
+    #app-screen { display: flex; width: 100vw; height: 100vh; }
+    .sidebar { width: 320px; background: #17212b; border-right: 1px solid #0e1621; display: flex; flex-direction: column; }
+    .sidebar-header { padding: 16px; background: #242f3d; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+    .chat-list { flex: 1; overflow-y: auto; }
+    .chat-item { padding: 14px 16px; border-bottom: 1px solid #0e1621; cursor: pointer; }
+    .chat-item:hover, .chat-item.active { background: #2b5278; }
+    .chat-title { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+    .chat-last { font-size: 13px; color: #8b9bb4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .chat-area { flex: 1; display: flex; flex-direction: column; background: #0e1621; }
+    .chat-header { padding: 16px; background: #17212b; border-bottom: 1px solid #0e1621; font-weight: bold; }
+    .messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+    .msg { max-width: 65%; padding: 10px 14px; border-radius: 10px; font-size: 14px; line-height: 1.4; }
+    .msg.in { background: #182533; align-self: flex-start; }
+    .msg.out { background: #2b5278; align-self: flex-end; }
+    .input-area { padding: 12px; background: #17212b; display: flex; gap: 10px; }
+    .input-area input { flex: 1; padding: 12px; border-radius: 8px; border: none; background: #242f3d; color: #fff; outline: none; }
+    .input-area button { padding: 0 20px; border: none; border-radius: 8px; background: #2b5278; color: #fff; font-weight: bold; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN SCREEN -->
+  <div id="auth-screen" class="auth-box">
+    <div id="step-phone">
+      <h2>Apna number daalo</h2>
+      <p>Confirm karo apna country code aur phone number daalo</p>
+      <input type="text" id="phone" value="+91" placeholder="+919876543210" />
+      <button onclick="sendCode()">Aage →</button>
+    </div>
+
+    <div id="step-code" class="hidden">
+      <h2>Code Daalo</h2>
+      <p>Telegram app par aaya 5-digit code</p>
+      <input type="text" id="code" placeholder="12345" />
+      <button onclick="verifyCode()">Verify Karein</button>
+      <button class="btn-back" onclick="goBack('step-phone')">← Wapas</button>
+    </div>
+
+    <div id="step-password" class="hidden">
+      <h2>Cloud Password</h2>
+      <p>2-step verification password daalo</p>
+      <input type="password" id="password" placeholder="Password" />
+      <button onclick="verifyPassword()">Login Karein</button>
+      <button class="btn-back" onclick="goBack('step-code')">← Wapas</button>
+    </div>
+
+    <div id="status"></div>
+  </div>
+
+  <!-- MAIN CHAT SCREEN -->
+  <div id="app-screen" class="hidden">
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <span>Telegram</span>
+        <button onclick="logout()" style="background:#ff4d4d;border:none;color:white;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:12px;">Logout</button>
+      </div>
+      <div id="chat-list" class="chat-list"></div>
+    </div>
+
+    <div class="chat-area">
+      <div id="chat-header" class="chat-header">Koi bhi chat select karein</div>
+      <div id="messages" class="messages"></div>
+      <div id="input-area" class="input-area hidden">
+        <input type="text" id="msg-input" placeholder="Message likhein..." onkeypress="if(event.key==='Enter') sendMessage()" />
+        <button onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { TelegramClient, Api } from "https://esm.sh/telegram@2.26.22";
+    import { StringSession } from "https://esm.sh/telegram@2.26.22/sessions";
+
+    const apiId = 36215209;
+    const apiHash = "cb3db246b091ce2504d21b7f3b59cd77";
+
+    const savedSession = localStorage.getItem("tg_web_session") || "";
+    const stringSession = new StringSession(savedSession);
+    let tgClient = null;
+    let phoneCodeHash = "";
+    let currentChatEntity = null;
+
+    function setStatus(msg, isError = true) {
+      const el = document.getElementById("status");
+      el.style.color = isError ? "#ff6b6b" : "#4cd137";
+      el.innerText = msg;
+    }
+
+    window.goBack = function(stepId) {
+      document.getElementById("step-phone").classList.add("hidden");
+      document.getElementById("step-code").classList.add("hidden");
+      document.getElementById("step-password").classList.add("hidden");
+      document.getElementById(stepId).classList.remove("hidden");
+      setStatus("");
+    };
+
+    async function initClient() {
+      if (!tgClient) {
+        tgClient = new TelegramClient(stringSession, apiId, apiHash, {
+          connectionRetries: 5,
+        });
+        await tgClient.connect();
+      }
+      return tgClient;
+    }
+
+    window.addEventListener("load", async () => {
+      if (savedSession) {
+        try {
+          setStatus("Session load ho raha hai...", false);
+          const client = await initClient();
+          if (await client.checkAuthorization()) {
+            openApp();
+          }
+        } catch (e) {
+          localStorage.removeItem("tg_web_session");
+          setStatus("");
+        }
+      }
+    });
+
+    window.sendCode = async function() {
+      const phone = document.getElementById("phone").value.replace(/\s+/g, "");
+      if (!phone) return setStatus("Phone number daalein.");
+
+      try {
+        setStatus("Telegram se connect ho raha hai...", false);
+        const client = await initClient();
+        const res = await client.sendCode({ apiId, apiHash }, phone);
+        phoneCodeHash = res.phoneCodeHash;
+
+        setStatus("Code aapke Telegram app par bhej diya gaya hai!", false);
+        document.getElementById("step-phone").classList.add("hidden");
+        document.getElementById("step-code").classList.remove("hidden");
+      } catch (err) {
+        console.error(err);
+        setStatus("Error: " + (err.errorMessage || err.message));
+      }
+    };
+
+    window.verifyCode = async function() {
+      const phone = document.getElementById("phone").value.replace(/\s+/g, "");
+      const code = document.getElementById("code").value.trim();
+      if (!code) return setStatus("5-digit code daalein.");
+
+      try {
+        setStatus("Verify ho raha hai...", false);
+        const client = await initClient();
+        await client.invoke(
+          new Api.auth.SignIn({
+            phoneNumber: phone,
+            phoneCodeHash: phoneCodeHash,
+            phoneCode: code,
+          })
+        );
+        openApp();
+      } catch (err) {
+        console.error(err);
+        if (err.errorMessage === "SESSION_PASSWORD_NEEDED") {
+          setStatus("Cloud password daalein.", false);
+          document.getElementById("step-code").classList.add("hidden");
+          document.getElementById("step-password").classList.remove("hidden");
+        } else {
+          setStatus("Error: " + (err.errorMessage || err.message));
+        }
+      }
+    };
+
+    window.verifyPassword = async function() {
+      const password = document.getElementById("password").value;
+      if (!password) return setStatus("Password daalein.");
+
+      try {
+        setStatus("Password check ho raha hai...", false);
+        const client = await initClient();
+        await client.signInWithPassword(
+          { apiId, apiHash },
+          {
+            password: async () => password,
+            onError: (err) => { throw err; },
+          }
+        );
+        openApp();
+      } catch (err) {
+        console.error(err);
+        setStatus("Error: " + (err.errorMessage || err.message));
+      }
+    };
+
+    async function openApp() {
+      const client = await initClient();
+      localStorage.setItem("tg_web_session", client.session.save());
+      document.getElementById("auth-screen").classList.add("hidden");
+      document.getElementById("app-screen").classList.remove("hidden");
+
+      const dialogs = await client.getDialogs({ limit: 20 });
+      const chatList = document.getElementById("chat-list");
+      chatList.innerHTML = "";
+
+      dialogs.forEach((dialog) => {
+        const div = document.createElement("div");
+        div.className = "chat-item";
+        div.innerHTML = `
+          <div class="chat-title">${dialog.title || "Unknown"}</div>
+          <div class="chat-last">${dialog.message?.message || ""}</div>
+        `;
+        div.onclick = () => loadMessages(dialog, div);
+        chatList.appendChild(div);
+      });
+    }
+
+    async function loadMessages(dialog, element) {
+      document.querySelectorAll(".chat-item").forEach(el => el.classList.remove("active"));
+      element.classList.add("active");
+
+      currentChatEntity = dialog.entity;
+      document.getElementById("chat-header").innerText = dialog.title || "Chat";
+      document.getElementById("input-area").classList.remove("hidden");
+
+      const client = await initClient();
+      const msgs = await client.getMessages(currentChatEntity, { limit: 25 });
+      const msgBox = document.getElementById("messages");
+      msgBox.innerHTML = "";
+
+      msgs.reverse().forEach((m) => {
+        if (!m.message) return;
+        const div = document.createElement("div");
+        div.className = "msg " + (m.out ? "out" : "in");
+        div.innerText = m.message;
+        msgBox.appendChild(div);
+      });
+      msgBox.scrollTop = msgBox.scrollHeight;
+    }
+
+    window.sendMessage = async function() {
+      const input = document.getElementById("msg-input");
+      const text = input.value.trim();
+      if (!text || !currentChatEntity) return;
+
+      input.value = "";
+      const client = await initClient();
+      await client.sendMessage(currentChatEntity, { message: text });
+
+      const msgBox = document.getElementById("messages");
+      const div = document.createElement("div");
+      div.className = "msg out";
+      div.innerText = text;
+      msgBox.appendChild(div);
+      msgBox.scrollTop = msgBox.scrollHeight;
+    };
+
+    window.logout = function() {
+      localStorage.removeItem("tg_web_session");
+      location.reload();
+    };
+  </script>
+</body>
+</html>
