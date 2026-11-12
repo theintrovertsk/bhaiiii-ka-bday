@@ -4,6 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Telegram Web Clone</title>
+  <script>
+    // Node.js polyfills required by GramJS in browser environments
+    window.global = window;
+    window.process = { env: { NODE_ENV: "production" }, browser: true };
+  </script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background: #0e1621; color: #fff; height: 100vh; display: flex; justify-content: center; align-items: center; }
@@ -16,6 +21,7 @@
     .auth-box input { width: 100%; padding: 12px; margin-bottom: 16px; border-radius: 8px; border: 1px solid #2b5278; background: #0e1621; color: #fff; font-size: 16px; outline: none; }
     .auth-box button { width: 100%; padding: 12px; border: none; border-radius: 8px; background: #2b5278; color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; margin-bottom: 8px; }
     .auth-box button:hover { background: #366491; }
+    .auth-box button:disabled { opacity: 0.6; cursor: not-allowed; }
     .btn-back { background: transparent !important; color: #8b9bb4 !important; border: 1px solid #2b5278 !important; }
     #status { margin-top: 10px; font-size: 13px; color: #ff6b6b; word-break: break-word; }
 
@@ -48,14 +54,14 @@
       <h2>Apna number daalo</h2>
       <p>Confirm karo apna country code aur phone number daalo</p>
       <input type="text" id="phone" value="+91" placeholder="+919876543210" />
-      <button onclick="sendCode()">Aage →</button>
+      <button id="btn-send" onclick="sendCode()">Aage →</button>
     </div>
 
     <div id="step-code" class="hidden">
       <h2>Code Daalo</h2>
       <p>Telegram app par aaya 5-digit code</p>
       <input type="text" id="code" placeholder="12345" />
-      <button onclick="verifyCode()">Verify Karein</button>
+      <button id="btn-verify" onclick="verifyCode()">Verify Karein</button>
       <button class="btn-back" onclick="goBack('step-phone')">← Wapas</button>
     </div>
 
@@ -63,7 +69,7 @@
       <h2>Cloud Password</h2>
       <p>2-step verification password daalo</p>
       <input type="password" id="password" placeholder="Password" />
-      <button onclick="verifyPassword()">Login Karein</button>
+      <button id="btn-pass" onclick="verifyPassword()">Login Karein</button>
       <button class="btn-back" onclick="goBack('step-code')">← Wapas</button>
     </div>
 
@@ -91,16 +97,20 @@
   </div>
 
   <script type="module">
-    import * as telegram from "https://esm.sh/telegram@2.26.22";
+    import { Buffer } from "https://esm.sh/buffer@6.0.3";
+    window.Buffer = Buffer;
 
-    const TelegramClient = telegram.TelegramClient;
-    const Api = telegram.Api;
-    const StringSession = telegram.sessions.StringSession;
+    import * as telegram from "https://esm.sh/telegram@2.26.22?bundle";
+
+    const TelegramClient = telegram.TelegramClient || telegram.default?.TelegramClient;
+    const Api = telegram.Api || telegram.default?.Api;
+    const StringSession = telegram.sessions?.StringSession || telegram.default?.sessions?.StringSession;
 
     const apiId = 36215209;
     const apiHash = "cb3db246b091ce2504d21b7f3b59cd77";
 
     const savedSession = localStorage.getItem("tg_web_session") || "";
+    const stringSession = new StringSession(savedSession);
     let tgClient = null;
     let phoneCodeHash = "";
     let currentChatEntity = null;
@@ -119,12 +129,14 @@
       setStatus("");
     };
 
-    async function initClient() {
+    async function getConnectedClient() {
       if (!tgClient) {
-        const session = new StringSession(savedSession);
-        tgClient = new TelegramClient(session, apiId, apiHash, {
+        tgClient = new TelegramClient(stringSession, apiId, apiHash, {
           connectionRetries: 5,
+          useWSS: true,
         });
+      }
+      if (!tgClient.connected) {
         await tgClient.connect();
       }
       return tgClient;
@@ -134,9 +146,11 @@
       if (savedSession) {
         try {
           setStatus("Session load ho raha hai...", false);
-          const client = await initClient();
+          const client = await getConnectedClient();
           if (await client.checkAuthorization()) {
             openApp();
+          } else {
+            setStatus("");
           }
         } catch (e) {
           localStorage.removeItem("tg_web_session");
@@ -149,9 +163,12 @@
       const phone = document.getElementById("phone").value.replace(/\s+/g, "");
       if (!phone) return setStatus("Phone number daalein.");
 
+      const btn = document.getElementById("btn-send");
+      btn.disabled = true;
+
       try {
-        setStatus("Telegram se connect ho raha hai...", false);
-        const client = await initClient();
+        setStatus("Telegram server se connect ho raha hai...", false);
+        const client = await getConnectedClient();
         const res = await client.sendCode({ apiId, apiHash }, phone);
         phoneCodeHash = res.phoneCodeHash;
 
@@ -160,7 +177,10 @@
         document.getElementById("step-code").classList.remove("hidden");
       } catch (err) {
         console.error(err);
+        tgClient = null;
         setStatus("Error: " + (err.errorMessage || err.message));
+      } finally {
+        btn.disabled = false;
       }
     };
 
@@ -169,9 +189,12 @@
       const code = document.getElementById("code").value.trim();
       if (!code) return setStatus("5-digit code daalein.");
 
+      const btn = document.getElementById("btn-verify");
+      btn.disabled = true;
+
       try {
         setStatus("Verify ho raha hai...", false);
-        const client = await initClient();
+        const client = await getConnectedClient();
         await client.invoke(
           new Api.auth.SignIn({
             phoneNumber: phone,
@@ -189,6 +212,8 @@
         } else {
           setStatus("Error: " + (err.errorMessage || err.message));
         }
+      } finally {
+        btn.disabled = false;
       }
     };
 
@@ -196,9 +221,12 @@
       const password = document.getElementById("password").value;
       if (!password) return setStatus("Password daalein.");
 
+      const btn = document.getElementById("btn-pass");
+      btn.disabled = true;
+
       try {
         setStatus("Password check ho raha hai...", false);
-        const client = await initClient();
+        const client = await getConnectedClient();
         await client.signInWithPassword(
           { apiId, apiHash },
           {
@@ -210,11 +238,13 @@
       } catch (err) {
         console.error(err);
         setStatus("Error: " + (err.errorMessage || err.message));
+      } finally {
+        btn.disabled = false;
       }
     };
 
     async function openApp() {
-      const client = await initClient();
+      const client = await getConnectedClient();
       localStorage.setItem("tg_web_session", client.session.save());
       document.getElementById("auth-screen").classList.add("hidden");
       document.getElementById("app-screen").classList.remove("hidden");
@@ -243,7 +273,7 @@
       document.getElementById("chat-header").innerText = dialog.title || "Chat";
       document.getElementById("input-area").classList.remove("hidden");
 
-      const client = await initClient();
+      const client = await getConnectedClient();
       const msgs = await client.getMessages(currentChatEntity, { limit: 25 });
       const msgBox = document.getElementById("messages");
       msgBox.innerHTML = "";
@@ -264,7 +294,7 @@
       if (!text || !currentChatEntity) return;
 
       input.value = "";
-      const client = await initClient();
+      const client = await getConnectedClient();
       await client.sendMessage(currentChatEntity, { message: text });
 
       const msgBox = document.getElementById("messages");
