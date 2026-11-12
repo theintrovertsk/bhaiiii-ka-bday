@@ -91,14 +91,16 @@
   </div>
 
   <script type="module">
-    import { TelegramClient, Api } from "https://esm.sh/telegram@2.26.22";
-    import { StringSession } from "https://esm.sh/telegram@2.26.22/sessions";
+    import * as telegram from "https://esm.sh/telegram@2.26.22";
+
+    const TelegramClient = telegram.TelegramClient;
+    const Api = telegram.Api;
+    const StringSession = telegram.sessions.StringSession;
 
     const apiId = 36215209;
     const apiHash = "cb3db246b091ce2504d21b7f3b59cd77";
 
     const savedSession = localStorage.getItem("tg_web_session") || "";
-    const stringSession = new StringSession(savedSession);
     let tgClient = null;
     let phoneCodeHash = "";
     let currentChatEntity = null;
@@ -119,7 +121,8 @@
 
     async function initClient() {
       if (!tgClient) {
-        tgClient = new TelegramClient(stringSession, apiId, apiHash, {
+        const session = new StringSession(savedSession);
+        tgClient = new TelegramClient(session, apiId, apiHash, {
           connectionRetries: 5,
         });
         await tgClient.connect();
